@@ -19,7 +19,9 @@ public class PacketSender {
 
         // Handle the carry by adding overflow back to the checksum
         while (checkSum > 0xFFFF) {
+            // Extract most significant bit (MSB) with shift
             int carry = checkSum >> 16;
+            // Add MSB and retain only least 4 significant bits
             checkSum = (checkSum & 0xFFFF) + carry;
         }
 
