@@ -28,7 +28,7 @@ public class PacketSender {
         // 1's complement
         checkSum = 0xFFFF - checkSum;
 
-        return Integer.toHexString(checkSum);
+        return String.format("%04x", checkSum);
     }
     
     public static String convertStringToHex(String msg) {
