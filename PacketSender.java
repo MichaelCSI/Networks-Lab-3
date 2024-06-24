@@ -1,14 +1,19 @@
+import java.io.DataOutputStream;
 import java.math.BigInteger;
+import java.net.Socket;
+import java.util.Scanner;
 
 public class PacketSender {
 
     private static int identificationNumber = 0;
 
-    public synchronized int getNextId() {
+    public synchronized static int getNextId() {
         // Can represent 65536 values with 2 bytes, cycle that for the id number
-        int id = (identificationNumber + 1) % 65536;
+        if(identificationNumber > 65536) {
+            identificationNumber = 0;
+        }
         identificationNumber++;
-        return id;
+        return identificationNumber;
     }
 
     public static String computeCheckSum(String... hexValues) {
@@ -31,32 +36,39 @@ public class PacketSender {
         return String.format("%04x", checkSum);
     }
     
-    public static String convertStringToHex(String msg) {
+    public static String convertStringToHex(String msg, String sourceIpStr, String destinationIpStr) {
         String ipv4AndTos = "4500";
         String iplengthInHex = String.format("%04x", msg.getBytes().length + 20);
         
-        // TODO: Change this later, currently set to fixed value for testing
-        String identificationField = "1C46";
-        // String identificationField = String.format("%04x", identificationNumber);
+        String identificationField = String.format("%04x", getNextId());
         
         String flagAndFragmentOffset = "4000";
         String ttlAndProtocol = "4006";
 
-        // TODO: GET ACTUAL IPs HERE, currently set to fixed values for testing
-        String sourceIpPart1 = "C0A8";
-        String sourceIpPart2 = "0003";
-        String destinationIpPart1 = "C0A8";
-        String destinationIpPart2 = "0001";
+        // Break ip address strings into parts and parse the hex version
+        String[] sourceIpParts = sourceIpStr.split("\\.");
+        String sourceIp = "";
+        for(String sourceIpPart : sourceIpParts) {
+            int temp = Integer.parseInt(sourceIpPart);
+            sourceIp += String.format("%02x", temp);
+        }
+        String[] destinationIpParts = destinationIpStr.split("\\.");
+        String destinationIp = "";
+        for(String destinationIpPart : destinationIpParts) {
+            int temp = Integer.parseInt(destinationIpPart);
+            destinationIp += String.format("%02x", temp);
+        }
 
         String checkSum = computeCheckSum(
-            ipv4AndTos, iplengthInHex, identificationField, flagAndFragmentOffset,
-            ttlAndProtocol, sourceIpPart1, sourceIpPart2, destinationIpPart1, destinationIpPart2);
+            ipv4AndTos, iplengthInHex, identificationField, flagAndFragmentOffset, ttlAndProtocol, 
+            sourceIp.substring(0, sourceIp.length() / 2), sourceIp.substring(sourceIp.length() / 2, sourceIp.length()),
+            destinationIp.substring(0, destinationIp.length() / 2), destinationIp.substring(destinationIp.length() / 2, destinationIp.length()));
 
         String payloadHex = String.format("%x", new BigInteger(1, msg.getBytes()));
 
         String datagram = 
-            ipv4AndTos + iplengthInHex + identificationField + flagAndFragmentOffset + ttlAndProtocol +
-            checkSum + sourceIpPart1 + sourceIpPart2 + destinationIpPart1 + destinationIpPart2 + payloadHex;
+            ipv4AndTos + iplengthInHex + identificationField + flagAndFragmentOffset + 
+            ttlAndProtocol + checkSum + sourceIp + destinationIp + payloadHex;
 
         // Append 0s to datagram until length is divisible by 8
         while (datagram.length() % 8 != 0) {
@@ -66,10 +78,31 @@ public class PacketSender {
         return datagram.replaceAll("(.{" + 4 + "})", "$1 ").trim().toUpperCase();
     }
 
-    public static void main(String args[]) {
-        String msg = "COLOMBIA 2 - MESSI 0";
-        System.out.println("\n");
-        System.out.println(convertStringToHex(msg));
-        System.out.println("\n");
+    public static void main(String args[]) throws Exception {
+        try (Scanner scanner = new Scanner(System.in)) {
+            boolean socketOpen = true;
+            
+            // Client socket and output stream for server
+            Socket client = new Socket("localhost",8888);
+            DataOutputStream out = new DataOutputStream(client.getOutputStream());
+
+            // Get relevant IP fields for datagram
+            String sourceIp = client.getLocalAddress().getHostAddress().toString();
+            String destinationIp = client.getInetAddress().getHostAddress().toString();
+            
+            while(socketOpen) {
+                System.out.print("Enter a message (\"exit\" to stop): ");
+                String msg = scanner.nextLine();
+
+                out.writeUTF(convertStringToHex(msg, sourceIp, destinationIp));
+
+                // Close client connection for exit command
+                if(msg.toLowerCase().equals("exit")) {
+                    System.out.println("Closing client");
+                    client.close();
+                    socketOpen = false;
+                }
+            }
+        }
     }
 }
