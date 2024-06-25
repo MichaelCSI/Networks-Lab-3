@@ -16,7 +16,7 @@ public class PacketSender {
         return identificationNumber;
     }
 
-    public static String computeCheckSum(String... hexValues) {
+    public static String computeChecksum(String... hexValues) {
         int checkSum = 0;
         for (String headerHex : hexValues) {
             checkSum += Integer.parseInt(headerHex, 16);
@@ -59,7 +59,7 @@ public class PacketSender {
             destinationIp += String.format("%02x", temp);
         }
 
-        String checkSum = computeCheckSum(
+        String checkSum = computeChecksum(
             ipv4AndTos, iplengthInHex, identificationField, flagAndFragmentOffset, ttlAndProtocol, 
             sourceIp.substring(0, sourceIp.length() / 2), sourceIp.substring(sourceIp.length() / 2, sourceIp.length()),
             destinationIp.substring(0, destinationIp.length() / 2), destinationIp.substring(destinationIp.length() / 2, destinationIp.length()));
