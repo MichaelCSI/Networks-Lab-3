@@ -69,6 +69,17 @@ public class PacketReceiver {
 
             while(socketOpen) {
                 String msg = in.readUTF();
+
+                Map<String, String> datagramMap = extractMessageFromDatagram(msg);
+
+                // Close server connection if exit command
+                if(datagramMap.get("payload").toLowerCase().equals("exit")) {
+                    System.out.println("Closing server");
+                    socketOpen = false;
+                    server.close();
+                    break;
+                }
+
                 boolean checksumCorrect = false;
                 if(verifyChecksum(msg)) {
                     // Checksum correct, print message later
@@ -78,8 +89,6 @@ public class PacketReceiver {
                     System.out.println("\nThe verification of the checksum demonstrates that the packet received is corrupted. Packet Discarded!");
                     break;
                 }
-
-                Map<String, String> datagramMap = extractMessageFromDatagram(msg);
 
                 // Data
                 System.out.print("\nThe data received from " + datagramMap.get("senderIp"));
@@ -93,13 +102,6 @@ public class PacketReceiver {
                 // Checksum correct
                 if(checksumCorrect) {
                     System.out.println("The verification of the checksum demonstrates that the packet received is correct.");
-                }
-
-                // Close server connection if exit command
-                if(msg.toLowerCase().equals("exit")) {
-                    System.out.println("Closing server");
-                    socketOpen = false;
-                    server.close();
                 }
             }
         }

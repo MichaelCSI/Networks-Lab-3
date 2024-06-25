@@ -79,9 +79,7 @@ public class PacketSender {
     }
 
     public static void main(String args[]) throws Exception {
-        try (Scanner scanner = new Scanner(System.in)) {
-            boolean socketOpen = true;
-            
+        try (Scanner scanner = new Scanner(System.in)) {            
             // Client socket and output stream for server
             Socket client = new Socket("localhost",8888);
             DataOutputStream out = new DataOutputStream(client.getOutputStream());
@@ -90,19 +88,14 @@ public class PacketSender {
             String sourceIp = client.getLocalAddress().getHostAddress().toString();
             String destinationIp = client.getInetAddress().getHostAddress().toString();
             
-            while(socketOpen) {
+            String msg = "";
+            while(!msg.toLowerCase().equals("exit")) {
                 System.out.print("Enter a message (\"exit\" to stop): ");
-                String msg = scanner.nextLine();
-
+                msg = scanner.nextLine();
                 out.writeUTF(convertStringToHex(msg, sourceIp, destinationIp));
-
-                // Close client connection for exit command
-                if(msg.toLowerCase().equals("exit")) {
-                    System.out.println("Closing client");
-                    client.close();
-                    socketOpen = false;
-                }
             }
+            System.out.println("Closing client");
+            client.close();
         }
     }
 }
